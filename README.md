@@ -255,6 +255,50 @@ Success Rate: 98.5%
 [2025-01-22 14:30:12] [ERROR] FAILED: orders_123.xml - Premature end of data in tag record line 45
 ```
 
+## Audit Tracking Feature
+
+The converter automatically adds source file tracking to every record in the fact table for complete data lineage and audit trail capabilities.
+
+### Audit Columns Added to Fact Table
+
+Every record in the fact table includes:
+- `source_file_name` - The name of the XML file this record came from
+- `load_timestamp` - When the record was processed
+- `load_date` - Date of processing
+- `load_time` - Time of processing
+- `batch_id` - Unique identifier for the processing batch
+
+### Benefits
+
+1. **Data Lineage**: Trace any record back to its source XML file
+2. **Error Investigation**: Quickly identify which file contains problematic data
+3. **Incremental Loading**: Track which files have been processed
+4. **Compliance**: Maintain complete audit trail for regulatory requirements
+5. **Data Quality**: Analyze data quality patterns by source file
+
+### Example Usage
+
+```r
+# Query records from a specific source file
+february_records <- fact_data %>%
+  filter(source_file_name == "orders_february_2025.xml")
+
+# Aggregate metrics by source file
+summary_by_file <- fact_data %>%
+  group_by(source_file_name) %>%
+  summarise(
+    record_count = n(),
+    total_amount = sum(amount),
+    avg_amount = mean(amount)
+  )
+
+# Find when each file was processed
+processing_timeline <- fact_data %>%
+  select(source_file_name, load_timestamp) %>%
+  distinct() %>%
+  arrange(load_timestamp)
+
+
 ## Performance Benchmarks
 
 | Files | Total Size | Processing Time | Memory Peak |
