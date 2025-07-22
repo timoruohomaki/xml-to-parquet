@@ -36,7 +36,7 @@ install.packages(c(
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/xml2parquet.git
+git clone https://github.com/timoruohomaki/xml2parquet.git
 cd xml2parquet
 
 # Run the setup script to create directories and examples
