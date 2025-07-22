@@ -222,16 +222,37 @@ The converter handles various XML structures:
 
 ### Audit Log Format
 ```
-[2025-01-22 10:30:45] [INFO] Found 1000 XML files to process
-[2025-01-22 10:30:46] [INFO] Analyzing schema from sample files...
-[2025-01-22 10:31:15] [AUDIT] Wrote fact_main: 50000 rows
-[2025-01-22 10:31:16] [AUDIT] Wrote dim_category: 25 rows
+===== NEW PROCESSING SESSION: 2025-01-22 14:30:00 =====
+[2025-01-22 14:30:00] [SESSION] ===== NEW PROCESSING SESSION: 2025-01-22 14:30:00 =====
+[2025-01-22 14:30:00] [INFO] Found 1000 XML files in ./input
+[2025-01-22 14:30:00] [QUEUE] Queued: orders_001.xml
+[2025-01-22 14:30:00] [QUEUE] Queued: orders_002.xml
+...
+[2025-01-22 14:30:01] [START] Processing file: orders_001.xml
+[2025-01-22 14:30:01] [COMPLETE] SUCCESS: orders_001.xml - Extracted 150 rows
+[2025-01-22 14:30:01] [START] Processing file: orders_002.xml
+[2025-01-22 14:30:01] [ERROR] FAILED: orders_002.xml - XML parsing error: Invalid XML structure
+[2025-01-22 14:30:15] [BATCH] Batch 1 complete: 48/50 successful, 2 failed
+...
+[2025-01-22 14:35:00] [AUDIT] Wrote fact_main: 125000 rows
+[2025-01-22 14:35:00] [AUDIT] Wrote dim_category: 45 rows
+
+========== PROCESSING SUMMARY ==========
+Start Time: 2025-01-22 14:30:00
+End Time: 2025-01-22 14:35:00
+Duration: 300.0 seconds
+Total Files Processed: 1000
+Successful: 985
+Failed: 15
+Success Rate: 98.5%
+=======================================
 ```
 
 ### Error Log Format
 ```
-[2025-01-22 10:30:55] [ERROR] Failed to parse invalid.xml: Missing ID attribute
-[2025-01-22 10:31:02] [ERROR] Error parsing corrupted.xml: Premature end of data
+[2025-01-22 14:30:01] [ERROR] FAILED: orders_002.xml - XML parsing error: Invalid XML structure
+[2025-01-22 14:30:05] [ERROR] FAILED: orders_045.xml - Missing ID attribute
+[2025-01-22 14:30:12] [ERROR] FAILED: orders_123.xml - Premature end of data in tag record line 45
 ```
 
 ## Performance Benchmarks
