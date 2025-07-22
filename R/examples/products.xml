@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<products>
+  <record id="1" category="electronics" brand="Samsung">
+    <name>Galaxy S21</name>
+    <price>799.99</price>
+    <quantity>50</quantity>
+    <rating>4.5</rating>
+  </record>
+  <record id="2" category="electronics" brand="Apple">
+    <name>iPhone 13</name>
+    <price>899.99</price>
+    <quantity>45</quantity>
+    <rating>4.7</rating>
+  </record>
+  <record id="3" category="accessories" brand="Samsung">
+    <name>Wireless Charger</name>
+    <price>49.99</price>
+    <quantity>100</quantity>
+    <rating>4.2</rating>
+  </record>
+</products>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orders>
+  <record id="1001" customer="ABC Corp" region="North">
+    <order_date>2024-01-15</order_date>
+    <items>
+      <total_amount>2549.97</total_amount>
+      <item_count>3</item_count>
+      <discount>127.50</discount>
+    </items>
+    <status>completed</status>
+  </record>
+  <record id="1002" customer="XYZ Ltd" region="South">
+    <order_date>2024-01-16</order_date>
+    <items>
+      <total_amount>1299.99</total_amount>
+      <item_count>1</item_count>
+      <discount>0</discount>
+    </items>
+    <status>pending</status>
+  </record>
+</orders>
