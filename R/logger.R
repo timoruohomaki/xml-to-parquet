@@ -1,9 +1,26 @@
-# logger.R - Logging Functions
+# logger.R - Logging Functions with Date-based Rotation
+
+# Get date-stamped log filename
+get_log_filename <- function(base_name) {
+  # Extract directory and filename parts
+  log_dir <- dirname(base_name)
+  file_base <- tools::file_path_sans_ext(basename(base_name))
+  file_ext <- tools::file_ext(base_name)
+  
+  # Add SQL date format (YYYY-MM-DD)
+  date_stamp <- format(Sys.Date(), "%Y-%m-%d")
+  
+  # Construct new filename
+  file.path(log_dir, sprintf("%s_%s.%s", file_base, date_stamp, file_ext))
+}
 
 # Core logging function
 log_message <- function(message, file, level) {
+  # Get date-stamped filename
+  log_file <- get_log_filename(file)
+  
   # Ensure log directory exists
-  log_dir <- dirname(file)
+  log_dir <- dirname(log_file)
   if (!dir.exists(log_dir)) {
     dir.create(log_dir, recursive = TRUE, showWarnings = FALSE)
   }
@@ -14,7 +31,7 @@ log_message <- function(message, file, level) {
             format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
             level,
             message),
-    file = file,
+    file = log_file,
     append = TRUE
   )
 }
@@ -99,7 +116,8 @@ create_processing_report <- function() {
     success_rate
   )
   
-  cat(report, file = AUDIT_LOG, append = TRUE)
+  # Write to date-stamped log
+  cat(report, file = get_log_filename(AUDIT_LOG), append = TRUE)
   message(report)
 }
 
@@ -160,6 +178,43 @@ log_timing <- function(start_time, operation) {
     AUDIT_LOG,
     "PERF"
   )
+}
+
+# Log rotation helper - list old log files
+list_old_logs <- function(log_dir = "logs", days_to_keep = 30) {
+  if (!dir.exists(log_dir)) return(character(0))
+  
+  # Get all log files with dates
+  log_files <- list.files(log_dir, pattern = "_\\d{4}-\\d{2}-\\d{2}\\.log$", 
+                          full.names = TRUE)
+  
+  if (length(log_files) == 0) return(character(0))
+  
+  # Extract dates from filenames
+  dates <- gsub(".*_(\\d{4}-\\d{2}-\\d{2})\\.log$", "\\1", log_files)
+  file_dates <- as.Date(dates, format = "%Y-%m-%d")
+  
+  # Find old files
+  cutoff_date <- Sys.Date() - days_to_keep
+  old_files <- log_files[file_dates < cutoff_date]
+  
+  old_files
+}
+
+# Archive old logs (optional utility)
+archive_old_logs <- function(log_dir = "logs", days_to_keep = 30) {
+  old_logs <- list_old_logs(log_dir, days_to_keep)
+  
+  if (length(old_logs) > 0) {
+    archive_dir <- file.path(log_dir, "archive")
+    dir.create(archive_dir, showWarnings = FALSE)
+    
+    for (log_file in old_logs) {
+      file.rename(log_file, file.path(archive_dir, basename(log_file)))
+    }
+    
+    log_info(sprintf("Archived %d old log files", length(old_logs)))
+  }
 }
 
 # Helper for string concatenation

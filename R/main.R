@@ -24,6 +24,16 @@ SCHEMA_DIR <- "./schemas"
 VALIDATION_MODE <- "auto"
 FAIL_ON_INVALID <- TRUE
 SCHEMA_FILE <- NULL
+TRACK_SOURCE_FILE <- TRUE        # Add source tracking to facts
+
+# Comment extraction settings
+EXTRACT_COMMENTS <- TRUE                    # Enable comment extraction
+COMMENT_PATTERN <- "^([A-Za-z]+):([^:]+)$" # Pattern for business keys
+STORE_RAW_COMMENTS <- FALSE                # Store raw comment text
+COMMENT_AS_DIMENSION <- TRUE               # Treat business key as dimension
+
+# Output settings
+POWERBI_MODE <- TRUE # creates tables with PBI friendly names like FactTable_Main.parquet
 
 # Audit tracking - source file will be added to every fact record
 TRACK_SOURCE_FILE <- TRUE
@@ -163,4 +173,117 @@ process_batch_with_tracking <- function(batch_files, batch_id, schema_info) {
   } else {
     return(list(fact = data.table(), dimensions = list(), error_summary = error_summary))
   }
+}
+
+# Test function for comment extraction
+test_comment_extraction <- function() {
+  # Create test XML with comment
+  test_xml <- '<?xml version="1.0" encoding="UTF-8"?>
+<!-- OrderType:B2B -->
+<orders>
+  <record id="1001" customer="ABC Corp" region="North">
+    <order_date>2024-01-15</order_date>
+    <items>
+      <total_amount>2549.97</total_amount>
+      <item_count>3</item_count>
+    </items>
+  </record>
+  <record id="1002" customer="XYZ Ltd" region="South">
+    <order_date>2024-01-16</order_date>
+    <items>
+      <total_amount>1299.99</total_amount>
+      <item_count>1</item_count>
+    </items>
+  </record>
+</orders>'
+  
+  # Write test file
+  test_file <- "test_comment_extraction.xml"
+  writeLines(test_xml, test_file)
+  
+  # Test extraction
+  cat("Testing comment extraction...\n")
+  
+  # Parse with enhanced parser
+  result <- parse_xml_streaming_with_comments(test_file)
+  
+  # Check results
+  if ("OrderType" %in% names(result)) {
+    cat("✓ Successfully extracted business key\n")
+    cat(sprintf("  - Business key name: OrderType\n"))
+    cat(sprintf("  - Business key value: %s\n", unique(result$OrderType)))
+    cat(sprintf("  - Applied to %d records\n", nrow(result)))
+  } else {
+    cat("✗ Failed to extract business key\n")
+  }
+  
+  # Show sample data
+  cat("\nSample data with business key:\n")
+  print(head(result[, c("record_id", "customer", "OrderType", "business_key_name", "business_key_value")]))
+  
+  # Cleanup
+  unlink(test_file)
+  
+  invisible(result)
+}
+
+# Alternative patterns for different comment formats
+COMMENT_PATTERNS <- list(
+  standard = "^([A-Za-z]+):([^:]+)$",           # ABCD:1234
+  underscore = "^([A-Za-z_]+):([^:]+)$",        # ABC_DEF:1234
+  equals = "^([A-Za-z]+)=([^=]+)$",             # ABCD=1234
+  spaced = "^([A-Za-z]+)\\s*:\\s*([^:]+)$",    # ABCD : 1234
+  numeric_key = "^([A-Za-z0-9]+):([^:]+)$"     # ABC123:1234
+)
+
+# Function to validate comment pattern
+validate_comment_pattern <- function(pattern, test_comments) {
+  results <- sapply(test_comments, function(comment) {
+    grepl(pattern, trimws(comment))
+  })
+  
+  data.frame(
+    comment = test_comments,
+    matches = results,
+    stringsAsFactors = FALSE
+  )
+}
+
+# Enhanced schema analyzer to handle business keys
+update_schema_for_business_keys <- function(schema_info, sample_data) {
+  # Check if business key columns exist
+  business_key_cols <- c("business_key_name", "business_key_value")
+  dynamic_business_keys <- setdiff(
+    names(sample_data),
+    c(business_key_cols, schema_info$column)
+  )
+  
+  if (length(dynamic_business_keys) > 0 && COMMENT_AS_DIMENSION) {
+    # Add dynamic business key columns as dimensions
+    new_rows <- data.frame(
+      column = dynamic_business_keys,
+      classification = "dimension",
+      data_type = "string",
+      unique_count = sapply(dynamic_business_keys, function(col) {
+        n_distinct(sample_data[[col]], na.rm = TRUE)
+      }),
+      null_ratio = 0,
+      numeric_ratio = 0,
+      mean_length = sapply(dynamic_business_keys, function(col) {
+        mean(nchar(as.character(sample_data[[col]])), na.rm = TRUE)
+      }),
+      sample_values = sapply(dynamic_business_keys, function(col) {
+        paste(head(unique(sample_data[[col]]), 3), collapse = "|")
+      }),
+      stringsAsFactors = FALSE
+    )
+    
+    schema_info <- rbind(schema_info, new_rows)
+    
+    log_info(sprintf("Added %d business key dimension(s): %s",
+                     length(dynamic_business_keys),
+                     paste(dynamic_business_keys, collapse = ", ")))
+  }
+  
+  schema_info
 }
